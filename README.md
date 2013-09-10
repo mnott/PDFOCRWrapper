@@ -32,13 +32,13 @@ command line parameter cmd=xyz.properties, pointing to another file.
 
 If you have extracted all files into one directory, you should have
 
-  pdfocrwrapper-1.1-201007011705.jar   (mandatory)
-  pdfocr.properties                    (optional)
-  log4j.jar                            (mandatory)
-  log4j.properties                     (optional)
-  iText.jar                            (mandatory)
-  bcmail-jdk16-145.jar                 (optional)
-  bcprov-jdk16-145.jar                 (optional)
+  pdfocrwrapper-1.1-201007011705.jar   (mandatory)  
+  pdfocr.properties                    (optional)  
+  log4j.jar                            (mandatory)  
+  log4j.properties                     (optional)  
+  iText.jar                            (mandatory)  
+  bcmail-jdk16-145.jar                 (optional)  
+  bcprov-jdk16-145.jar                 (optional)  
   
 The version numbers and time stamps of the files change of course.
 
@@ -46,22 +46,22 @@ Say, these files are in /tmp/pdfocrwrapper, and your pdf documents
 are located somewhere under /data. Change to the /data directory
 and run
 
-  java -jar /tmp/pdfocrwrapper
+  java -jar /tmp/pdfocrwrapper  
   
 In this case, the configuration file pdfocr.properties, if present,
 from the directory /tmp/pdfocrwrapper is used. If you want to use
 another configuration file, call like
 
-  java -jar /tmp/pdfocrwrapper cmd=xyz.properties
+  java -jar /tmp/pdfocrwrapper cmd=xyz.properties  
   
 If you have files that do not work with the wrapper - in particular 
 files that have some DRM in them - you can try to use the Linux
 tools pdf2ps and ps2pdf to convert these files to Postscript and
 back:
 
-  pdf2ps bad.pdf
-  ps2pdf bad.ps
-  rm bad.ps
+  pdf2ps bad.pdf  
+  ps2pdf bad.ps  
+  rm bad.ps  
   
 If you want to manually set the creator of a given set of PDF files
 so that they are not sent to the OCR engine at all, you can do like
@@ -79,5 +79,3 @@ DEBUG and change it to any of INFO, WARN, ERROR, FATAL.
 Finally, there is a more flexible PDF metadata tool in this package -
 to use it, look up org.mnsoft.pdfocr.PDFTrans in the source distribution.
 
-
-   
