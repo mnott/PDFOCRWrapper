@@ -59,19 +59,18 @@ files that have some DRM in them - you can try to use the Linux
 tools pdf2ps and ps2pdf to convert these files to Postscript and
 back:
 
-<code>
+
     pdf2ps bad.pdf  
     ps2pdf bad.ps  
     rm bad.ps  
-</code>
 
 If you want to manually set the creator of a given set of PDF files
 so that they are not sent to the OCR engine at all, you can do like
 
-<code>
+
     for i in /tmp/pdfocrwrapper/*.jar ; do export CLASSPATH=$CLASSPATH:$i; done
     java org.mnsoft.pdfocr.CreatorSetter ocr a.pdf b.pdf c.pdf
-</code>
+
 
 with any number of PDF files. In this case, the creator field of
 the selected PDF files is going to be changed to "ocr". This process
