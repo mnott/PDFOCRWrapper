@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<project name="PDF OCR Wrapper 2" default="help" basedir=".">
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+  <taskdef resource="org/mnsoft/tools/ant/CPEclipseCP/CPEclipseCP.properties"/>
+  <taskdef name="retrotranslator" classname="net.sf.retrotranslator.transformer.RetrotranslatorTask"/>
+  <taskdef resource="org/mnsoft/tools/ant/ANTTimeStamp/ANTTimeStamp.properties"/>
+	
+  <property environment="env" />
+	<property name="version"                 value="1.1"/>
+  <property name="lib.dir"                 value="${basedir}/lib"/>
+  <property name="perl.dir"                value="/usr/bin"/>
+  <property name="src.dir"                 value="${basedir}/src"/>
+  <property name="helpers.dir"             value="${basedir}/helpers"/>
+  <property name="build.dir"               value="${basedir}/src"/>
+  <property name="build.documentation.dir" value="${build.dir}/doc"/>
+  <property name="build.classes.dir"       value="${build.dir}"/>
+  <property name="package.name"            value="pdfocrwrapper"/>
+  <property name="system.null"             value="/dev/null"/>
+  <property name="distri.dir"              value="${basedir}/distribution"/>
+
+
+
+  <!-- ===============================================================
+       HELP INFO TASK
+       =============================================================== -->
+
+  <target name="help">
+    <echo>--------------------------------------------------</echo>
+    <echo>       The following options are available:       </echo>
+    <echo>--------------------------------------------------</echo>
+    <echo/>
+    <echo>  all              -  Make it all                 </echo>
+    <echo>  compile          -  Compile the Source Code     </echo>
+    <echo>  jar              -  Create the ${package.name}.jar</echo>
+    <echo>  source           -  Create the Source Distri.   </echo>
+    <echo>  checkin          -  Create Distribution Zip File</echo>
+    <echo>  clean            -  Clean up.                   </echo>
+    <echo/>
+    <echo>--------------------------------------------------</echo>
+  </target>
+
+
+  <!-- ===============================================================
+       ALL TASK
+       =============================================================== -->
+  <target name="all" depends="config,clean,compile,jar,source,helpers"/>
+
+
+  <!-- ===============================================================
+       CONFIG TASK
+       =============================================================== -->
+  <target name="config">
+    <cpeclipsecp pathid="CLASSPATH" property="CLASSPATH" workspace="${basedir}"
+  	        dir="." filename=".classpath" verbose="false"/>
+    <anttimestamp dateFormat="yyyyMMddHHmm" property="ANTTimeStamp"/>
+ </target>
+
+
+  <!-- ===============================================================
+       CLEAN TASK
+       =============================================================== -->
+
+  <target name="clean" depends="config">
+    <delete>
+      <fileset dir="${distri.dir}/${package.name}"><include name="**/*.*" /></fileset>
+    </delete>
+  </target>
+
+
+
+  <!-- ===============================================================
+       COMPILATION TASKS
+       =============================================================== -->
+
+  <target name="compile" depends="config">
+    <mkdir dir="${build.classes.dir}"/>
+    <javac srcdir="${src.dir}"
+         destdir="${build.classes.dir}"
+         debug="on"
+         deprecation="on"
+  	     optimize="on"
+    >
+      <classpath path="${CLASSPATH}" />
+      <include name="com/**/*.java" />
+    </javac>
+  </target>
+
+
+  <!-- ===============================================================
+       ARCHIVE TASK
+       =============================================================== -->
+
+  <target name="jar" depends="compile">
+    <delete file="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}.jar"/>
+    <jar jarfile="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}.jar">
+      <fileset dir="${build.classes.dir}">
+        <include name="org/**/*.class" />
+	  </fileset>
+      <manifest>
+        <attribute name="Main-Class" value="org.mnsoft.pdfocr.Wrapper"/>
+        <attribute name="Class-Path" value=". log4j.jar ${package.name}.jar iText.jar bcmail-jdk16-145.jar bcprov-jdk16-145.jar commons-io-2.2.jar" />
+      </manifest>
+    </jar>
+  </target>
+
+
+  <!-- ===============================================================
+       SOURCE TASK
+       =============================================================== -->
+
+  <target name="source" depends="compile">
+    <delete file="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}-source.zip"/>
+    <zip destfile="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}-source.zip">
+      <fileset dir="${src.dir}">
+          <include name="org/**/*.java" />
+      </fileset>      	
+      <fileset dir="${basedir}">
+        <include name="pdfocr.properties"/>
+        <include name="log4j.properties"/>
+      </fileset>
+    </zip>
+  </target>
+
+	
+  <!-- ===============================================================
+	   HELPERS TASK
+	   =============================================================== -->
+  <target name="helpers" depends="clean">
+  	<delete file="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}-helpers.zip"/>
+  	<zip destfile="${distri.dir}/${package.name}/${package.name}-${version}-${ANTTimeStamp}-helpers.zip">
+      <fileset dir="${lib.dir}">
+        <include name="log4j.jar" />
+        <include name="iText.jar" />
+        <include name="bcmail-jdk16-145.jar" />
+        <include name="bcprov-jdk16-145.jar" />
+        <include name="commons-io-2.2.jar" />
+      </fileset>
+      <fileset dir="${basedir}">
+      	<include name="pdfocr.properties"/>
+      	<include name="log4j.properties"/>
+  	  </fileset>
+  	</zip>
+  </target>
+</project>
