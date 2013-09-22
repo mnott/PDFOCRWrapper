@@ -151,4 +151,35 @@ public class StringUtility {
       return intDefault;
     }
   }
+  
+  /**
+   * Replaces String into a text.<p>
+   *
+   * @param strText The Text in which the substitution shall be done
+   * @param strOldString The String that has to be replaced
+   * @param strNewString The replacement String
+   * @param blnAll true, if all matches shall be replaced, false for only first match.
+   * @return The updated String
+   */
+  public static String replace(String strText, String strOldString, String strNewString, boolean blnAll) {
+    if (null != strText) {
+      int iLength = strOldString.length();
+      int iPos    = 0;
+      while (iPos >= 0) {
+        iPos = strText.indexOf(strOldString);
+        if (iPos >= 0) {
+          String strLeft  = strText.substring(0, iPos);
+          String strRight = strText.substring(iPos + iLength);
+          strText         = strLeft + strNewString + strRight;
+          iPos += iLength;
+          if (!blnAll) {
+            break;
+          }
+        }
+      }
+    }
+
+    return strText;
+  }
+
 }

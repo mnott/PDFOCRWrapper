@@ -42,12 +42,10 @@ public class Wrapper {
    */
   private static final Logger     log              = Logger.getLogger(Wrapper.class);
 
-
   /**
    * Default config file name.
    */
   public static final String      CONFIG_FILE_NAME = "pdfocr.properties";
-
 
   /**
    * The command to run the OCR Engine,
@@ -55,11 +53,13 @@ public class Wrapper {
    */
   public String                   OCR_COMMAND      = "abbyyocr -ic Uncompressed -if ###IF### -f PDF -pem ImageOnText -pfq 100% -pfc ###CREATOR### -rtn -of ###OF###";
 
+
   /**
    * The creator field entry. If detected,
    * file is not treated (again).
    */
   public String                   OCR_CREATOR      = "ocr";
+
 
   /**
    * Temporary extension added to the file
@@ -67,25 +67,30 @@ public class Wrapper {
    */
   public String                   TMP_EXTENSION    = ".ocr";
 
+
   /**
    * Directory for temporary files
    */
   public String                   TMP_DIR          = ".";
+
 
   /**
    * The program parameters.
    */
   private HashMap<String, String> parameters       = new HashMap<String, String>();
 
+
   /**
    * The configuration file name, if any.
    */
   private String                  propertiesFile   = null;
 
+
   /**
    * Working directory.
    */
   private String                  wd               = ".";
+
 
   /**
    * Constructor.
@@ -93,7 +98,6 @@ public class Wrapper {
   public Wrapper(String wd) {
     this.wd = wd;
   }
-
 
   /**
    * The main loop.
@@ -120,8 +124,8 @@ public class Wrapper {
     RecursiveFileListIterator it = new RecursiveFileListIterator(new File(wd), new FileFilter(".pdf"));
 
     while (it.hasNext()) {
-      final File   f                    = it.next();
-      final String p                    = f.getAbsolutePath();
+      final File   originalFile         = it.next();
+      final String originalFilePath     = originalFile.getAbsolutePath();
 
       /*
        * Open the reader on the original File
@@ -129,9 +133,9 @@ public class Wrapper {
       PdfReader    readerOnOriginalFile;
 
       try {
-        readerOnOriginalFile = new PdfReader(p);
+        readerOnOriginalFile = new PdfReader(originalFilePath);
       } catch (Exception e) {
-        log.error("! ERROR: " + e.getMessage() + " File: " + p);
+        log.error("! ERROR: " + e.getMessage() + " File: " + originalFilePath);
 
         continue;
       }
@@ -149,7 +153,7 @@ public class Wrapper {
       String doc_creator = (String) info.get("Creator");
 
       if (this.OCR_CREATOR.equals(doc_creator)) {
-        log.debug("+ INFO: File " + p + " had already been run trough OCR engine. Skipping.");
+        log.debug("+ INFO: File " + originalFilePath + " had already been run trough OCR engine. Skipping.");
 
         continue;
       }
@@ -157,18 +161,18 @@ public class Wrapper {
       /*
        * Get the document time stamp so that we can set it later.
        */
-      final Date doc_timestamp = new Date(f.lastModified());
+      final Date doc_timestamp = new Date(originalFile.lastModified());
 
       /*
        * Get the number of pages in the original file
        */
       int        nOri          = readerOnOriginalFile.getNumberOfPages();
 
-      log.debug("+ INFO: Working on: " + p + " (" + nOri + " pages).");
+      log.debug("+ Working on: " + originalFilePath + " (" + nOri + " pages).");
 
       final StringBuffer sb = new StringBuffer();
 
-      sb.append(p + " ... ");
+      sb.append(originalFilePath + " ... ");
 
       /*
        * Get the remaining meta data
@@ -188,9 +192,9 @@ public class Wrapper {
       /*
        * Run the OCR Engine
        */
-      File output = null;
+      File outputFileFromOCR = null;
       try {
-        output = ocr(f);
+        outputFileFromOCR = ocr(originalFile);
       } catch (Exception e) {
         log.error("! ERROR: " + e.getMessage());
 
@@ -200,9 +204,11 @@ public class Wrapper {
       /*
        * Check for the result of the OCR Engine
        */
-      if ((output == null) || !output.exists()) {
+      if ((outputFileFromOCR == null) || !outputFileFromOCR.exists()) {
         continue;
       }
+
+      log.debug("+ " + outputFileFromOCR.getAbsolutePath() + " has come out of the OCR engine.");
 
       /*
        * Create final output
@@ -216,24 +222,26 @@ public class Wrapper {
       final File temp = File.createTempFile("ocr", ".pdf", new File(this.TMP_DIR));
       temp.deleteOnExit();
 
-      mergePDFs(f, output, temp, doc_title, doc_subject, doc_keywords, doc_author, doc_creator);
+      mergePDFs(originalFile, outputFileFromOCR, temp, doc_title, doc_subject, doc_keywords, doc_author, doc_creator);
 
-      FileUtils.deleteQuietly(f);
-      
-      FileUtils.moveFile(temp, new File(p));
+      FileUtils.deleteQuietly(originalFile);
+
+      FileUtils.moveFile(temp, new File(originalFilePath));
 
       /*
-       * Set the file access time, adding one second
+       * Set the file access time
        */
-      if (f.exists()) {
-        f.setLastModified(doc_timestamp.getTime() + 1000);
+      if ("true".equals(getAttribute("KEEPTS"))) {
+        if (originalFile.exists()) {
+          originalFile.setLastModified(doc_timestamp.getTime() + 1000);
+        }
       }
 
       /*
        * Finally, remove the temporary document
        */
       FileUtils.deleteQuietly(temp);
-      FileUtils.deleteQuietly(output);
+      FileUtils.deleteQuietly(outputFileFromOCR);
     }
   }
 
@@ -241,23 +249,27 @@ public class Wrapper {
   /**
    * Run the OCR command
    *
-   * @param file The file to run the command on
+   * @param originalFile The file to run the command on
    * @return The file that was created
    * @throws IOException
    * @throws InterruptedException
    */
-  private File ocr(File file) throws IOException, InterruptedException {
+  private File ocr(File originalFile) throws IOException, InterruptedException {
     /*
      * Create a temporary file and copy the source
      * file to it, to avoid UTF-8 encoding problems
      * on the filename confusing the OCR engine
      */
-    final File temp = File.createTempFile("ocr", ".pdf", new File(this.TMP_DIR));
-    temp.deleteOnExit();
+    log.debug("> Creating Temporary Source File");
 
-    final String ptemp = temp.getAbsolutePath();
+    final File sourceFileForOCR = File.createTempFile("ocr", ".pdf", new File(this.TMP_DIR));
+    sourceFileForOCR.deleteOnExit();
 
-    FileUtils.copyFile(file, temp, true);
+    log.debug("< Created Temporary Source File: " + sourceFileForOCR.getAbsolutePath());
+
+    FileUtils.copyFile(originalFile, sourceFileForOCR, true);
+
+    log.debug("+ Copied " + originalFile.getAbsolutePath() + " to " + sourceFileForOCR.getAbsolutePath());
 
     /*
      * Create the command line
@@ -265,9 +277,9 @@ public class Wrapper {
     String[] cmd = StringUtility.split(getAttribute("cmd"), " ");
     for (int i = 0; i < cmd.length; i++) {
       if ("###IF###".equals(cmd[i])) {
-        cmd[i] = ptemp;
+        cmd[i] = sourceFileForOCR.getAbsolutePath();
       } else if ("###OF###".equals(cmd[i])) {
-        cmd[i] = ptemp + this.TMP_EXTENSION;
+        cmd[i] = sourceFileForOCR.getAbsolutePath() + this.TMP_EXTENSION;
       } else if ("###CREATOR###".equals(cmd[i])) {
         cmd[i] = getAttribute("creator");
       }
@@ -281,6 +293,35 @@ public class Wrapper {
 
     log.debug("> Calling OCR Engine: " + sb);
 
+    callOCREngine(cmd);
+
+    /*
+     * Copy temporary output file to output file
+     */
+    final File targetFile = new File(this.TMP_DIR + "/" + originalFile.getName() + this.TMP_EXTENSION);
+    FileUtils.deleteQuietly(targetFile);
+
+    FileUtils.moveFile(new File(sourceFileForOCR.getAbsolutePath() + this.TMP_EXTENSION), targetFile);
+
+    /*
+     * Delete temporary file
+     */
+    FileUtils.deleteQuietly(new File(sourceFileForOCR.getAbsolutePath() + this.TMP_EXTENSION));
+
+    log.debug("< Calling OCR Engine. Output file is: " + targetFile.getAbsolutePath());
+
+    return targetFile;
+  }
+
+
+  /**
+   * Call an external program.
+   *
+   * @param cmd
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void callOCREngine(String[] cmd) throws IOException, InterruptedException {
     Runtime run = Runtime.getRuntime();
     Process pr  = run.exec(cmd);
     pr.waitFor();
@@ -288,25 +329,8 @@ public class Wrapper {
     BufferedReader buf  = new BufferedReader(new InputStreamReader(pr.getInputStream()));
     String         line = "";
     while ((line = buf.readLine()) != null) {
-      System.out.println(line);
+      log.info(line);
     }
-
-    /*
-     * Copy temporary output file to output file
-     */
-    final File targetFile = new File(this.TMP_DIR + "/" + file.getName() + this.TMP_EXTENSION);
-    FileUtils.deleteQuietly(targetFile);
-    
-    FileUtils.moveFile(new File(ptemp + this.TMP_EXTENSION), targetFile);
-
-    /*
-     * Delete temporary file
-     */
-    FileUtils.deleteQuietly(new File(ptemp));
-
-    log.debug("< Calling OCR Engine");
-
-    return targetFile;
   }
 
 
@@ -346,10 +370,11 @@ public class Wrapper {
       PdfImportedPage  bg_page   = null;
       for (int i = 0; i < fg_num_pages;) {
         ++i;
-        
+        System.out.print(" [" + i + "]");
+
         final byte[] fg_page_content = fg.getPageContent(i);
         final byte[] bg_page_content = bg.getPageContent(i);
-        
+
         final int    bg_size         = bg_page_content.length;
         final int    fg_size         = fg_page_content.length;
 
@@ -418,6 +443,8 @@ public class Wrapper {
       fg_writer.setMoreInfo(map);
 
       fg_writer.close();
+
+      System.out.println("");
     } catch (Exception e) {
       e.printStackTrace();
     }
